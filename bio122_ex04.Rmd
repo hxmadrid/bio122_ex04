@@ -1,0 +1,287 @@
+---
+title: "BIO 122 Laboratory Exercise 4: Skeletal Muscle Contraction"
+author: "Espinosa & Madrid"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+```
+
+```{r}
+
+library(tidyverse)
+library(ggpubr)
+library(broom)
+library(car)
+library(rstatix)
+library(GGally)
+library(cowplot)
+library(datasets)
+```
+
+
+# Data
+```{r}
+
+#  imports pooled data into R
+msc <- read.csv("C:/Users/Xyrine/Documents/School Stuff/BS BIO 4th Year/1st Semester/BIO 118/Module 1/Module 1 - Laboratory Exercise/bio118-class/exercises/bio122-ex04/data/msc.csv")
+
+#  cleans data
+msc <- msc %>%
+  select(!c(Name, Section)) %>%
+  mutate_all(~replace(., . == "", NA)) %>%
+  mutate(Muscle.Mass = gsub("\\%", "", Muscle.Mass)) %>%
+  drop_na()
+
+msc$Muscle.Mass <- as.numeric(msc$Muscle.Mass)
+
+#  isolates columns for arm size, arm length, and velocity
+msc.cont <- msc %>%
+  select(Muscle.Mass, Upper.Arm.Size, Upper.Arm.Length, Forearm.Length,
+         X0.25, X0.5, X1, X1.5, X2, ROC) %>%
+  gather(Load, Velocity, X0.25, X0.5, X1, X1.5, X2) %>%
+  mutate(Load = gsub("\\X", "", Load), 
+         Muscle.Mass = gsub("\\%", "", Muscle.Mass)) %>%
+  mutate_all(~replace(., . == "", NA)) %>%
+  drop_na()
+
+msc.cont$Muscle.Mass <- as.numeric(msc.cont$Muscle.Mass)
+
+head(msc.cont)
+
+```
+
+## Exploring Data
+```{r}
+
+roc <- read.csv("C:/Users/Xyrine/Documents/School Stuff/BS BIO 4th Year/1st Semester/BIO 118/Module 1/Module 1 - Laboratory Exercise/bio118-class/exercises/bio122-ex04/data/roc.csv")
+
+colnames(roc) <- c("Arm.Size", "ROC")
+
+ggplot(roc, aes(Arm.Size, ROC)) + geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+
+roc.lm <- lm(ROC ~ Arm.Size, roc)
+summary(roc.lm)
+
+
+cor(msc.cont$Forearm.Length, msc.cont$ROC)
+```
+
+```{r}
+bplot.ual <- ggplot(msc.cont, aes(x = Upper.Arm.Length, y = Velocity, col = Load)) +
+  geom_boxplot() 
+bplot.ual
+
+bplot.fore <- ggplot(msc.cont, aes(x = Forearm.Length, y = Velocity, col = Load)) +
+  geom_boxplot() 
+bplot.fore
+
+bplot.uas <- ggplot(msc.cont, aes(x = Upper.Arm.Size, y = Velocity, col = Load)) +
+  geom_boxplot() 
+bplot.uas
+
+```
+
+
+
+
+
+
+# 1. LOAD AND VELOCITY
+
+## 1.a. Data summary and visualization
+```{r}
+#  prints summary of data
+msc.cont %>%
+  group_by(Load) %>%
+  summarise(
+    Mean.Velocity = mean(Velocity),
+    SD.Velocity = sd(Velocity)
+  )
+
+#  visualizes data
+ggplot(msc.cont, aes(Load, Velocity)) + geom_boxplot() +
+  ylab("Velocity (contractions/min)") + xlab("Load (liters)")
+
+ggsave("C:/Users/Xyrine/Documents/School Stuff/BS BIO 4th Year/1st Semester/BIO 118/Module 1/Module 1 - Laboratory Exercise/bio118-class/exercises/bio122-ex04/figures/vload.png", 
+       width = 8, height = 5)
+
+head(msc)
+
+
+```
+
+## 1.b. ANOVA
+```{r}
+
+#  Assumption: homogeneity of variances
+leveneTest(Velocity ~ Load, data = msc.cont)
+
+## Accept null hypothesis (p > 0.05)
+## Not enough evidence suggests that differences in variances between groups
+### are statistically significant
+
+## Assume homoscedasticity
+
+
+# Assumption: normality
+shapiro.test(msc.cont$Velocity[msc.cont$Load == "X0.25"])  #  (p < 0.05)
+
+shapiro.test(msc.cont$Velocity[msc.cont$Load == "X0.5"])   #  (p < 0.05)
+
+shapiro.test(msc.cont$Velocity[msc.cont$Load == "X1"])     #  (p > 0.05) 
+
+shapiro.test(msc.cont$Velocity[msc.cont$Load == "X1.5"])   #  (p > 0.05)
+
+shapiro.test(msc.cont$Velocity[msc.cont$Load == "X2"])     #  (p > 0.05)
+
+
+res.anov <- aov(Velocity ~ Load, msc.cont)
+
+## histogram
+hist(res.anov$residuals)
+
+## qqplot
+qqPlot(res.anov$residuals,
+  id = FALSE # id = FALSE to remove point identification
+)
+
+## histogram shows roughly a bell curve, and points in the QQ plot nearly adhere to 
+### a straight line and are well within the confidence bands
+
+## We can assume normality
+
+
+#  ANOVA
+anov <- aov(Velocity ~ Load, msc.cont)
+summary(anov)
+
+```
+
+
+
+
+
+# 2. ARM PARAMETERS AND VELOCITY CONTROLLING FOR MUSCLE MASS
+
+```{r}
+
+#  isolates columns
+y <- msc.cont %>%
+  select(Upper.Arm.Size, Upper.Arm.Length, Forearm.Length, ROC, Muscle.Mass)
+
+ggsave("C:/Users/Xyrine/Documents/School Stuff/BS BIO 4th Year/1st Semester/BIO 118/Module 1/Module 1 - Laboratory Exercise/bio118-class/exercises/bio122-ex04/figures/cor.png",
+       width = 8, height = 6)
+
+#  visualization of correlation test (pearson)
+ggpairs(y,
+        lower = list(continuous = "smooth"),
+        columnLabels = c("Upper Arm Size", "Upper Arm Length", "Forearm Length",
+                         "ROC", "Muscle Mass"))
+
+```
+
+## Upper Arm Size vs. Muscle Mass
+```{r}
+
+#  Upper Arm Size vs. Muscle Mass scatter plot
+plot.uas <- ggplot(msc.cont, aes(Upper.Arm.Size, ROC, color = Muscle.Mass)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "lightblue4") +
+  xlab("Upper Arm Size (cm)") + ylab("Rate of Change") +
+  ggtitle("a")
+
+plot.uas$labels$colour <- "Muscle Mass %"
+plot.uas
+
+ggsave("C:/Users/Xyrine/Documents/School Stuff/BS BIO 4th Year/1st Semester/BIO 118/Module 1/Module 1 - Laboratory Exercise/bio118-class/exercises/bio122-ex04/figures/uas.png", 
+       width = 8, height = 5)
+
+
+
+## linear regression
+
+#  Upper Arm Size vs. ROC linear regression
+lm.uas <- lm(ROC ~ Upper.Arm.Size + Muscle.Mass, msc.cont)
+summary(lm.uas)
+
+
+```
+
+
+## Forearm Length vs. Muscle Mass
+```{r}
+
+#  Forearm Length vs. Muscle Mass scatter plot
+plot.fore <- ggplot(msc.cont, aes(Forearm.Length, ROC, color = Muscle.Mass)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "lightblue4") +
+  xlab("Forearm Length (cm)") + ylab("Rate of Change") +
+  ggtitle("c")
+
+ggsave("C:/Users/Xyrine/Documents/School Stuff/BS BIO 4th Year/1st Semester/BIO 118/Module 1/Module 1 - Laboratory Exercise/bio118-class/exercises/bio122-ex04/figures/fore.png",
+       width = 8, 
+       height = 5)
+
+plot.fore$labels$colour <- "Muscle Mass %"
+plot.fore
+
+## linear regression 
+
+#  Forerm Size vs. ROC linear regression
+lm.fore <- lm(ROC ~ Forearm.Length + Muscle.Mass, msc.cont)
+summary(lm.fore)
+
+
+```
+
+
+
+## Upper Arm Length vs. Muscle Mass
+```{r}
+
+#  Upper Arm Length vs. Muscle Mass scatter plot
+plot.ual <- ggplot(msc.cont, aes(Upper.Arm.Length, ROC, color = Muscle.Mass)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "lightblue4") +
+  xlab("Upper Arm Length (cm)") + ylab("Rate of Change") +
+  ggtitle("b")
+
+ggsave("C:/Users/Xyrine/Documents/School Stuff/BS BIO 4th Year/1st Semester/BIO 118/Module 1/Module 1 - Laboratory Exercise/bio118-class/exercises/bio122-ex04/figures/ual.png",
+       width = 8, height = 5)
+
+plot.ual$labels$colour <- "Muscle Mass %"
+plot.ual
+
+
+
+## linear regression 
+
+#  Upper Arm Size vs. ROC linear regression
+lm.ual <- lm(ROC ~ Upper.Arm.Length + Muscle.Mass, msc.cont)
+summary(lm.ual)
+
+
+```
+
+```{r}
+
+#  generates scatter plot grid
+grid <- plot_grid(plot.uas, plot.fore, plot.ual)
+
+ggsave("C:/Users/Xyrine/Documents/School Stuff/BS BIO 4th Year/1st Semester/BIO 118/Module 1/Module 1 - Laboratory Exercise/bio118-class/exercises/bio122-ex04/figures/grid.png",
+       width = 8, height = 5)
+
+print(grid)
+
+
+```
+
+
+
+
+
