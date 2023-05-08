@@ -27,7 +27,7 @@ library(datasets)
 ```{r}
 
 #  imports pooled data into R
-msc <- read.csv("C:/Users/Xyrine/Documents/School Stuff/BS BIO 4th Year/1st Semester/BIO 118/Module 1/Module 1 - Laboratory Exercise/bio118-class/exercises/bio122-ex04/data/msc.csv")
+msc <- read.csv("C:/Users/Xyrine/Documents/School Stuff/BS BIO 4th Year/1st Semester/BIO 118/Module 1/Module 1 - Laboratory Exercise/bio118-class/exercises/bio122_ex04/data/msc.csv")
 
 #  cleans data
 msc <- msc %>%
@@ -57,7 +57,7 @@ head(msc.cont)
 ## Exploring Data
 ```{r}
 
-roc <- read.csv("C:/Users/Xyrine/Documents/School Stuff/BS BIO 4th Year/1st Semester/BIO 118/Module 1/Module 1 - Laboratory Exercise/bio118-class/exercises/bio122-ex04/data/roc.csv")
+roc <- read.csv("C:/Users/Xyrine/Documents/School Stuff/BS BIO 4th Year/1st Semester/BIO 118/Module 1/Module 1 - Laboratory Exercise/bio118-class/exercises/bio122_ex04/data/roc.csv")
 
 colnames(roc) <- c("Arm.Size", "ROC")
 
@@ -129,15 +129,15 @@ leveneTest(Velocity ~ Load, data = msc.cont)
 
 
 # Assumption: normality
-shapiro.test(msc.cont$Velocity[msc.cont$Load == "X0.25"])  #  (p < 0.05)
+shapiro.test(msc.cont$Velocity[msc.cont$Load == "0.25"])  #  (p < 0.05)
 
-shapiro.test(msc.cont$Velocity[msc.cont$Load == "X0.5"])   #  (p < 0.05)
+shapiro.test(msc.cont$Velocity[msc.cont$Load == "0.5"])   #  (p > 0.05)
 
-shapiro.test(msc.cont$Velocity[msc.cont$Load == "X1"])     #  (p > 0.05) 
+shapiro.test(msc.cont$Velocity[msc.cont$Load == "1"])     #  (p > 0.05) 
 
-shapiro.test(msc.cont$Velocity[msc.cont$Load == "X1.5"])   #  (p > 0.05)
+shapiro.test(msc.cont$Velocity[msc.cont$Load == "1.5"])   #  (p > 0.05)
 
-shapiro.test(msc.cont$Velocity[msc.cont$Load == "X2"])     #  (p > 0.05)
+shapiro.test(msc.cont$Velocity[msc.cont$Load == "2"])     #  (p > 0.05)
 
 
 res.anov <- aov(Velocity ~ Load, msc.cont)
