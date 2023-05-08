@@ -230,7 +230,7 @@ ggsave("C:/Users/Xyrine/Documents/School Stuff/BS BIO 4th Year/1st Semester/BIO 
 plot.fore$labels$colour <- "Muscle Mass %"
 plot.fore
 
-## linear regression 
+## linear regression  
 
 #  Forerm Size vs. ROC linear regression
 lm.fore <- lm(ROC ~ Forearm.Length + Muscle.Mass, msc.cont)
